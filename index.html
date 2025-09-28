@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maze Run</title>
+  <style>
+    @keyframes fadeInIntro {
+      from { opacity: 0; transform: scale(0.98); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .intro-content {
+      background: linear-gradient(135deg, #1a1a3a 80%, #2c003e 100%);
+      border-radius: 18px;
+      box-shadow: 0 0 40px 10px #2c003e99;
+      padding: 48px 36px 36px 36px;
+      text-align: center;
+      animation: fadeInIntro 1.2s cubic-bezier(.4,0,.2,1);
+      min-width: 320px;
+      max-width: 90vw;
+    }
+    .glow-title {
+      font-size: 3.2rem;
+      letter-spacing: 0.1em;
+      color: #facc15;
+      text-shadow: 0 0 16px #facc15, 0 0 32px #ec4899, 0 0 8px #6366f1;
+      margin-bottom: 18px;
+      font-family: 'Orbitron', Arial, sans-serif;
+      animation: glowPulse 2.5s infinite alternate;
+    }
+    @keyframes glowPulse {
+      from { text-shadow: 0 0 16px #facc15, 0 0 32px #ec4899, 0 0 8px #6366f1; }
+      to { text-shadow: 0 0 32px #facc15, 0 0 48px #ec4899, 0 0 16px #6366f1; }
+    }
+    .intro-desc {
+      color: #e0e0ff;
+      font-size: 1.2rem;
+      margin-bottom: 32px;
+      letter-spacing: 0.03em;
+      text-shadow: 0 0 6px #2c003e;
+    }
+    .start-btn {
+      background: linear-gradient(90deg, #6366f1, #ec4899);
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 36px;
+      cursor: pointer;
+      box-shadow: 0 0 12px #6366f1aa;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .start-btn:hover {
+      background: linear-gradient(90deg, #ec4899, #6366f1);
+      transform: scale(1.05);
+    }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to bottom right, #0f0f2d, #2c003e);
+      color: white;
+      overflow: hidden;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px;
+      background: rgba(0,0,0,0.5);
+    }
+    .game-container {
+      display: flex;
+      flex-direction: row;
+      height: calc(100vh - 60px);
+      padding: 10px;
+    }
+    .maze {
+      flex: 3;
+      display: grid;
+      margin: auto;
+      background: #111;
+      border: 2px solid #444;
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+    .tile {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.3s;
+    }
+    @keyframes grassAnimation {
+      0% { background-position: 0 0; }
+      100% { background-position: 50px 50px; }
+    }
+    .wall {
+      background: #2d5a27;
+      background-image: 
+        linear-gradient(45deg, #348f29 25%, transparent 25%),
+        linear-gradient(-45deg, #348f29 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #348f29 75%),
+        linear-gradient(-45deg, transparent 75%, #348f29 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+      border: 1px solid #1d3a19;
+    }
+    .heal {
+      background: #4ade80;
+      background-image: radial-gradient(circle, #86efac 30%, #4ade80 70%);
+      box-shadow: 0 0 10px #4ade80;
+    }
+    .damage {
+      background: #ef4444;
+      background-image: radial-gradient(circle, #f87171 30%, #ef4444 70%);
+      box-shadow: 0 0 10px #ef4444;
+    }
+    .exit {
+      background: #facc15;
+      background-image: radial-gradient(circle, #fde047 30%, #facc15 70%);
+      box-shadow: 0 0 15px #facc15;
+    }
+    .player {
+      position: absolute;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg,#6366f1,#ec4899);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 20px;
+      transition: top 0.2s, left 0.2s;
+    }
+    .hud {
+      flex: 1;
+      margin-left: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 15px;
+    }
+    .health-bar {
+      height: 15px;
+      background: #444;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .health-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #06b6d4);
+      width: 100%;
+      transition: width 0.3s;
+    }
+    .modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.8);
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .modal.active {
+      visibility: visible;
+      opacity: 1;
+    }
+    .modal-content {
+      background: white;
+      color: black;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Animated Intro Screen -->
+  <div id="animatedIntro" class="modal active">
+    <div class="intro-content">
+      <h1 class="glow-title">Maze Run</h1>
+      <p class="intro-desc">Escape the maze. Beware of the traps. Heal, survive, and run!</p>
+      <button class="start-btn" onclick="showDifficulty()">Start</button>
+    </div>
+  </div>
+
+  <!-- Difficulty Selection Modal -->
+  <div id="introModal" class="modal">
+    <div class="modal-content">
+      <h2>Choose your difficulty</h2>
+      <button onclick="chooseDifficulty('easy')">Easy</button>
+      <button onclick="chooseDifficulty('medium')">Medium</button>
+      <button onclick="chooseDifficulty('hard')">Hard</button>
+    </div>
+  </div>
+
+  <header style="display:none" id="mainHeader">
+    <h1>Maze Run</h1>
+    <div>
+      <button onclick="restartLevel()">Refresh</button>
+      <!-- <input type="file" id="bgmUpload" accept="audio/*" onchange="uploadBgm(event)"> -->
+    </div>
+  </header>
+
+  <div class="game-container" id="gameContainer" style="display:none">
+    <div id="maze" class="maze"></div>
+    <div class="hud">
+      <div>
+        <h3>Health</h3>
+        <div class="health-bar"><div id="healthFill" class="health-fill"></div></div>
+        <p id="healthText">100 / 100</p>
+      </div>
+      <div>
+        <h3>Moves: <span id="moves">0</span></h3>
+        <h3>Level: <span id="level">1</span></h3>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <h2 id="modalTitle"></h2>
+      <p id="modalMessage"></p>
+      <button onclick="nextLevel()">Next Level</button>
+      <button onclick="restartLevel()">Replay</button>
+    </div>
+  </div>
+
+  <audio id="bgm" src="audio.mp3" loop autoplay></audio>
+
+  <script>
+
+    // Animated Intro logic
+    const animatedIntro = document.getElementById("animatedIntro");
+    function showDifficulty() {
+      animatedIntro.classList.remove("active");
+      introModal.classList.add("active");
+    }
+
+    // Difficulty settings
+    let DIFFICULTY = 'easy';
+    let DIFFICULTY_SETTINGS = {
+      easy:   { grid: 9,   wall: 10, heal: 3, damage: 3, maxLife: 80 },
+      medium: { grid: 11,  wall: 18, heal: 2, damage: 5, maxLife: 60 },
+      hard:   { grid: 13,  wall: 22, heal: 2, damage: 6, maxLife: 50 }
+    };
+    let GRID_SIZE = 11;
+    const TILE_EMPTY = 0, TILE_WALL = 1, TILE_HEAL = 2, TILE_DAMAGE = 3, TILE_EXIT = 4;
+    let level = 1, maxLife = 100, life = 100, moves = 0;
+    let map = [];
+    let player = {r:1, c:1};
+
+    const mazeEl = document.getElementById("maze");
+    const healthFill = document.getElementById("healthFill");
+    const healthText = document.getElementById("healthText");
+    const movesEl = document.getElementById("moves");
+    const levelEl = document.getElementById("level");
+    const modal = document.getElementById("modal");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalMessage = document.getElementById("modalMessage");
+    const bgm = document.getElementById("bgm");
+    const playerEl = document.createElement("div");
+    playerEl.className = "player";
+    playerEl.innerText = "🙂";
+
+    // Intro modal and UI show/hide
+    const introModal = document.getElementById("introModal");
+    const mainHeader = document.getElementById("mainHeader");
+    const gameContainer = document.getElementById("gameContainer");
+
+    function chooseDifficulty(diff) {
+      DIFFICULTY = diff;
+      let set = DIFFICULTY_SETTINGS[diff];
+      GRID_SIZE = set.grid;
+      maxLife = set.maxLife;
+      introModal.classList.remove("active");
+      mainHeader.style.display = "flex";
+      gameContainer.style.display = "flex";
+      resetLevel();
+    }
+
+    function generateLevel(){
+      let set = DIFFICULTY_SETTINGS[DIFFICULTY];
+      map = Array(GRID_SIZE).fill().map(()=>Array(GRID_SIZE).fill(TILE_EMPTY));
+      
+      // Create structured hedge maze pattern
+      // Start with border walls
+      for(let r=0;r<GRID_SIZE;r++){
+        for(let c=0;c<GRID_SIZE;c++){
+          if(r===0 || c===0 || r===GRID_SIZE-1 || c===GRID_SIZE-1) map[r][c]=TILE_WALL;
+        }
+      }
+      
+      // Create grid pattern for hedge maze
+      for(let r=2;r<GRID_SIZE-1;r+=2){
+        for(let c=2;c<GRID_SIZE-1;c+=2){
+          map[r][c]=TILE_WALL;
+          // Create vertical or horizontal walls
+          if(Math.random() < 0.65){
+            if(r<GRID_SIZE-2 && Math.random()<0.5) map[r+1][c]=TILE_WALL;
+            else if(c<GRID_SIZE-2) map[r][c+1]=TILE_WALL;
+          }
+        }
+      }
+      
+      // Ensure path to exit exists
+      let pathToExit = createPathToExit();
+      pathToExit.forEach(([r,c]) => map[r][c] = TILE_EMPTY);
+      
+      // Place heals
+      for(let i=0;i<set.heal;i++){
+        let r=Math.floor(Math.random()*GRID_SIZE),c=Math.floor(Math.random()*GRID_SIZE);
+        if(map[r][c]===TILE_EMPTY) map[r][c]=TILE_HEAL;
+      }
+      // Place damage tiles
+      for(let i=0;i<set.damage;i++){
+        let r=Math.floor(Math.random()*GRID_SIZE),c=Math.floor(Math.random()*GRID_SIZE);
+        if(map[r][c]===TILE_EMPTY) map[r][c]=TILE_DAMAGE;
+      }
+      map[GRID_SIZE-2][GRID_SIZE-2]=TILE_EXIT;
+      player={r:1,c:1};
+      renderMaze();
+    }
+
+    function renderMaze(){
+      mazeEl.innerHTML="";
+      mazeEl.style.gridTemplateColumns = `repeat(${GRID_SIZE},40px)`;
+      mazeEl.style.gridTemplateRows = `repeat(${GRID_SIZE},40px)`;
+      for(let r=0;r<GRID_SIZE;r++){
+        for(let c=0;c<GRID_SIZE;c++){
+          const cell=document.createElement("div");
+          cell.className="tile";
+          if(map[r][c]===TILE_WALL) cell.classList.add("wall");
+          if(map[r][c]===TILE_HEAL) cell.classList.add("heal");
+          if(map[r][c]===TILE_DAMAGE) cell.classList.add("damage");
+          if(map[r][c]===TILE_EXIT) cell.classList.add("exit");
+          mazeEl.appendChild(cell);
+        }
+      }
+      mazeEl.appendChild(playerEl);
+      updatePlayerPosition();
+      updateHUD();
+    }
+
+    function createPathToExit() {
+      let path = [];
+      let current = [1,1];
+      let end = [GRID_SIZE-2, GRID_SIZE-2];
+      
+      while(current[0] !== end[0] || current[1] !== end[1]) {
+        path.push([...current]);
+        // Move closer to exit, preferring horizontal movement
+        if(current[1] < end[1] && Math.random() < 0.6) current[1]++;
+        else if(current[0] < end[0]) current[0]++;
+        else if(current[1] < end[1]) current[1]++;
+      }
+      path.push(end);
+      return path;
+    }
+
+    function updatePlayerPosition(){
+      playerEl.style.top = player.r*40+2+"px";
+      playerEl.style.left = player.c*40+2+"px";
+    }
+
+    function updateHUD(){
+      healthFill.style.width = (life/maxLife*100)+"%";
+      healthText.textContent = life+" / "+maxLife;
+      movesEl.textContent = moves;
+      levelEl.textContent = level;
+    }
+
+    function move(dr,dc){
+      const nr=player.r+dr,nc=player.c+dc;
+      if(map[nr][nc]===TILE_WALL) { life=Math.max(0,life-2); updateHUD(); return; }
+      player={r:nr,c:nc};
+      moves++;
+      life=Math.max(0,life-(DIFFICULTY === 'hard' ? 1 : 2));
+      if(map[nr][nc]===TILE_HEAL){ life=Math.min(maxLife,life+(DIFFICULTY === 'hard' ? 20 : 15)); map[nr][nc]=TILE_EMPTY; }
+      if(map[nr][nc]===TILE_DAMAGE){ life=Math.max(0,life-(6+level*2)); map[nr][nc]=TILE_EMPTY; }
+      if(map[nr][nc]===TILE_EXIT){ winLevel(); return; }
+      if(life<=0){ gameOver(); return; }
+      updatePlayerPosition();
+      updateHUD();
+    }
+
+    function winLevel(){
+      modal.classList.add("active");
+      modalTitle.textContent="Congratulations!";
+      modalMessage.textContent="You escaped Level "+level;
+    }
+
+    function gameOver(){
+      modal.classList.add("active");
+      modalTitle.textContent="Game Over";
+      modalMessage.textContent="You ran out of life.";
+    }
+
+    function nextLevel(){
+      level++;
+      resetLevel();
+      modal.classList.remove("active");
+    }
+
+    function restartLevel(){
+      resetLevel();
+      modal.classList.remove("active");
+    }
+
+    function resetLevel(){
+      let set = DIFFICULTY_SETTINGS[DIFFICULTY];
+      maxLife = Math.max(30, set.maxLife - level*(DIFFICULTY === 'hard' ? 5 : 8));
+      life = maxLife;
+      moves = 0;
+      generateLevel();
+      updateHUD();
+    }
+
+    function uploadBgm(e){
+      const file=e.target.files[0];
+      if(file){
+        const url=URL.createObjectURL(file);
+        bgm.src=url;
+        bgm.play().catch(error => console.log('Audio playback error:', error));
+      }
+    }
+
+    // Start background music as soon as page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      bgm.play().catch(error => console.log('Auto-play prevented:', error));
+    });
+
+    // Add click event listener to start music (browsers require user interaction)
+    document.addEventListener('click', function() {
+      if (bgm.paused) {
+        bgm.play().catch(error => console.log('Audio playback error:', error));
+      }
+    }, { once: true });
+
+    window.addEventListener("keydown",e=>{
+      // Only allow movement if intro modal is not active
+      if(introModal.classList.contains("active")) return;
+      if(e.key==="ArrowUp") move(-1,0);
+      if(e.key==="ArrowDown") move(1,0);
+      if(e.key==="ArrowLeft") move(0,-1);
+      if(e.key==="ArrowRight") move(0,1);
+    });
+  </script>
+</body>
+</html>
